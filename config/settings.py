@@ -26,6 +26,7 @@ INSTALLED_APPS = [
 
     # Сторонние
     'rest_framework',
+    'django_filters',
 
     # Наши приложения
     'users',
@@ -120,4 +121,8 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.AllowAny',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.OrderingFilter',
+    ],
 }
