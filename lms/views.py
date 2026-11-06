@@ -7,10 +7,12 @@ from django.shortcuts import get_object_or_404
 from .models import Course, Lesson, Subscription
 from .serializers import CourseSerializer, LessonSerializer
 from .permissions import IsModerator, IsOwner, IsNotModerator
+from .paginators import CoursePagination, LessonPagination
 
 
 class CourseViewSet(viewsets.ModelViewSet):
     serializer_class = CourseSerializer
+    pagination_class = CoursePagination
 
     def get_permissions(self):
         if self.action == 'create':
@@ -35,6 +37,7 @@ class CourseViewSet(viewsets.ModelViewSet):
 
 class LessonListCreateView(generics.ListCreateAPIView):
     serializer_class = LessonSerializer
+    pagination_class = LessonPagination
 
     def get_permissions(self):
         if self.request.method == 'POST':
