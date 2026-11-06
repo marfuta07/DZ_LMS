@@ -38,7 +38,13 @@ class Lesson(models.Model):
     description = models.TextField(blank=True, null=True, verbose_name='Описание')
     preview = models.ImageField(upload_to='lessons/previews/', blank=True, null=True, verbose_name='Превью')
     video_link = models.URLField(blank=True, null=True, verbose_name='Ссылка на видео')
-
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='lessons',
+        verbose_name='Владелец',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

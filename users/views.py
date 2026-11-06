@@ -7,12 +7,14 @@ from .filters import PaymentFilter
 from rest_framework import viewsets, permissions, generics
 from django.contrib.auth import get_user_model
 from .serializers import UserSerializer, UserCreateSerializer
+from rest_framework.permissions import IsAuthenticated
 
 class PaymentListAPIView(generics.ListAPIView):
     """Список платежей с фильтрацией и сортировкой."""
 
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
+    permission_classes = [IsAuthenticated]
 
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_class = PaymentFilter
