@@ -1,7 +1,10 @@
 from rest_framework import viewsets, generics
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
 
-from .models import Course, Lesson
+from .models import Course, Lesson, Subscription
 from .serializers import CourseSerializer, LessonSerializer
 from .permissions import IsModerator, IsOwner, IsNotModerator
 
@@ -67,3 +70,22 @@ class LessonRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         if user.is_authenticated and user.groups.filter(name='Модераторы').exists():
             return Lesson.objects.all()
         return Lesson.objects.filter(owner=user)
+
+class SubscriptionAPIView(APIView):
+    """Управление подпиской на курс (создание/удаление)."""
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        course_id = request.data.get('course_id')
+        course_item = get_object_or_404(Course, id=course_id)
+
+        subs_item = Subscription.objects.filter(user=user, course=course_item)
+
+        if subs_item.exists():
+            subs_item.delete()
+            message = 'подписка удалена'
+        else:
+            Subscription.objects.create(user=user, course=course_item)
+            message = 'подписка добавлена'
+
+        return Response({"message": message})
