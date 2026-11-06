@@ -1,8 +1,17 @@
 from rest_framework import serializers
 from .models import Course, Lesson
+from .validators import validate_youtube_url
+
 
 
 class LessonSerializer(serializers.ModelSerializer):
+    video_link = serializers.URLField(
+        validators=[validate_youtube_url],
+        required=False,
+        allow_null=True,
+        allow_blank=True
+    )
+
     class Meta:
         model = Lesson
         fields = '__all__'
