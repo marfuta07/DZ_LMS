@@ -3,12 +3,12 @@ from pathlib import Path
 from datetime import timedelta
 
 
-# ← ЭТО БЫЛО ПОТЕРЯНО
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'w@k)*uu)e-m_6_!tgbir6xyp-$ip=8pru466qx$2nu&#7002+i'   # ← оставьте свой или скопируйте из исходного файла
+SECRET_KEY = 'w@k)*uu)e-m_6_!tgbir6xyp-$ip=8pru466qx$2nu&#7002+i'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -28,6 +28,7 @@ INSTALLED_APPS = [
 
     # Сторонние
     'rest_framework',
+    'drf_spectacular',
     'django_filters',
 
     # Наши приложения
@@ -129,10 +130,18 @@ REST_FRAMEWORK = {
         'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.OrderingFilter',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'LMS API',
+    'DESCRIPTION': 'API для системы обучения (курсы, уроки, платежи, подписки)',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }

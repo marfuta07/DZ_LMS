@@ -8,6 +8,7 @@ from .models import Course, Lesson, Subscription
 from .serializers import CourseSerializer, LessonSerializer
 from .permissions import IsModerator, IsOwner, IsNotModerator
 from .paginators import CoursePagination, LessonPagination
+from drf_spectacular.utils import extend_schema
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -26,6 +27,8 @@ class CourseViewSet(viewsets.ModelViewSet):
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Course.objects.none()
         user = self.request.user
         if user.is_authenticated and user.groups.filter(name='Модераторы').exists():
             return Course.objects.all()
@@ -47,6 +50,8 @@ class LessonListCreateView(generics.ListCreateAPIView):
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Lesson.objects.none()
         user = self.request.user
         if user.is_authenticated and user.groups.filter(name='Модераторы').exists():
             return Lesson.objects.all()
@@ -69,6 +74,8 @@ class LessonRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Lesson.objects.none()
         user = self.request.user
         if user.is_authenticated and user.groups.filter(name='Модераторы').exists():
             return Lesson.objects.all()
@@ -76,6 +83,26 @@ class LessonRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
 class SubscriptionAPIView(APIView):
     """Управление подпиской на курс (создание/удаление)."""
+
+    @extend_schema(
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'course_id': {'type': 'integer', 'description': 'ID курса'},
+                },
+                'required': ['course_id'],
+            }
+        },
+        responses={
+            200: {
+                'type': 'object',
+                'properties': {
+                    'message': {'type': 'string', 'description': 'подписка добавлена/удалена'},
+                },
+            },
+        },
+    )
 
     def post(self, request, *args, **kwargs):
         user = request.user
