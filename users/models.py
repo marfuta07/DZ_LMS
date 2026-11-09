@@ -46,6 +46,7 @@ class User(AbstractUser):
     def __str__(self):
         return self.email
 
+
 class Payment(models.Model):
     """Платёж за курс или урок."""
 
@@ -86,6 +87,18 @@ class Payment(models.Model):
         max_length=20,
         choices=PAYMENT_METHOD_CHOICES,
         verbose_name='Способ оплаты',
+    )
+
+
+    payment_url = models.URLField(
+        max_length=500,
+        blank=True, null=True,
+        verbose_name='Ссылка на оплату'
+    )
+    stripe_session_id = models.CharField(
+        max_length=200,
+        blank=True, null=True,
+        verbose_name='Stripe Session ID'
     )
 
     class Meta:

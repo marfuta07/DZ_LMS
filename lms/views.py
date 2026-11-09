@@ -9,6 +9,14 @@ from .serializers import CourseSerializer, LessonSerializer
 from .permissions import IsModerator, IsOwner, IsNotModerator
 from .paginators import CoursePagination, LessonPagination
 from drf_spectacular.utils import extend_schema
+import stripe
+from rest_framework import status
+from users.models import Payment
+from .services import (
+    create_stripe_product,
+    create_stripe_price,
+    create_checkout_session,
+)
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -119,3 +127,45 @@ class SubscriptionAPIView(APIView):
             message = 'подписка добавлена'
 
         return Response({"message": message})
+
+class CoursePaymentAPIView(APIView):
+    """Создание оплаты курса через Stripe."""
+
+    def post(self, request, pk):
+        course = get_object_or_404(Course, id=pk)
+        amount_rub = 4990.00
+        amount_kopecks = int(amount_rub * 100)
+
+        try:
+            # 1. Создать продукт
+            product = create_stripe_product(name=course.title)
+            # 2. Создать цену (в копейках)
+            price = create_stripe_price(product.id, amount_kopecks)
+            # 3. Создать сессию
+            session = create_checkout_session(
+                price.id,
+                success_url='http://127.0.0.1:8000/api/docs/',
+                cancel_url='http://127.0.0.1:8000/api/docs/',
+            )
+
+            # 4. Сохранить платёж
+            payment = Payment.objects.create(
+                user=request.user,
+                course=course,
+                amount=amount_rub,
+                payment_method='transfer',
+                payment_url=session.url,
+                stripe_session_id=session.id,
+            )
+
+            return Response({
+                'payment_id': payment.id,
+                'payment_url': session.url,
+                'amount': str(payment.amount),
+                'course': course.id,
+            })
+        except stripe.error.StripeError as e:
+            return Response(
+                {'error': f'Ошибка Stripe: {e.user_message}'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
