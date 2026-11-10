@@ -8,6 +8,15 @@ from .models import Course, Lesson, Subscription
 from .serializers import CourseSerializer, LessonSerializer
 from .permissions import IsModerator, IsOwner, IsNotModerator
 from .paginators import CoursePagination, LessonPagination
+from drf_spectacular.utils import extend_schema
+import stripe
+from rest_framework import status
+from users.models import Payment
+from .services import (
+    create_stripe_product,
+    create_stripe_price,
+    create_checkout_session,
+)
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -26,6 +35,8 @@ class CourseViewSet(viewsets.ModelViewSet):
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Course.objects.none()
         user = self.request.user
         if user.is_authenticated and user.groups.filter(name='Модераторы').exists():
             return Course.objects.all()
@@ -47,6 +58,8 @@ class LessonListCreateView(generics.ListCreateAPIView):
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Lesson.objects.none()
         user = self.request.user
         if user.is_authenticated and user.groups.filter(name='Модераторы').exists():
             return Lesson.objects.all()
@@ -69,6 +82,8 @@ class LessonRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         return [permission() for permission in self.permission_classes]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Lesson.objects.none()
         user = self.request.user
         if user.is_authenticated and user.groups.filter(name='Модераторы').exists():
             return Lesson.objects.all()
@@ -76,6 +91,26 @@ class LessonRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
 class SubscriptionAPIView(APIView):
     """Управление подпиской на курс (создание/удаление)."""
+
+    @extend_schema(
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'course_id': {'type': 'integer', 'description': 'ID курса'},
+                },
+                'required': ['course_id'],
+            }
+        },
+        responses={
+            200: {
+                'type': 'object',
+                'properties': {
+                    'message': {'type': 'string', 'description': 'подписка добавлена/удалена'},
+                },
+            },
+        },
+    )
 
     def post(self, request, *args, **kwargs):
         user = request.user
@@ -92,3 +127,45 @@ class SubscriptionAPIView(APIView):
             message = 'подписка добавлена'
 
         return Response({"message": message})
+
+class CoursePaymentAPIView(APIView):
+    """Создание оплаты курса через Stripe."""
+
+    def post(self, request, pk):
+        course = get_object_or_404(Course, id=pk)
+        amount_rub = 4990.00
+        amount_kopecks = int(amount_rub * 100)
+
+        try:
+            # 1. Создать продукт
+            product = create_stripe_product(name=course.title)
+            # 2. Создать цену (в копейках)
+            price = create_stripe_price(product.id, amount_kopecks)
+            # 3. Создать сессию
+            session = create_checkout_session(
+                price.id,
+                success_url='http://127.0.0.1:8000/api/docs/',
+                cancel_url='http://127.0.0.1:8000/api/docs/',
+            )
+
+            # 4. Сохранить платёж
+            payment = Payment.objects.create(
+                user=request.user,
+                course=course,
+                amount=amount_rub,
+                payment_method='transfer',
+                payment_url=session.url,
+                stripe_session_id=session.id,
+            )
+
+            return Response({
+                'payment_id': payment.id,
+                'payment_url': session.url,
+                'amount': str(payment.amount),
+                'course': course.id,
+            })
+        except stripe.error.StripeError as e:
+            return Response(
+                {'error': f'Ошибка Stripe: {e.user_message}'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
