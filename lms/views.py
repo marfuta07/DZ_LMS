@@ -3,6 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
+from .tasks import send_course_update_email
 
 from .models import Course, Lesson, Subscription
 from .serializers import CourseSerializer, LessonSerializer
@@ -44,6 +45,16 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+
+    def perform_update(self, serializer):
+        course = serializer.save()
+        subscriber_emails = list(
+            Subscription.objects
+            .filter(course=course)
+            .values_list('user__email', flat=True)
+        )
+        if subscriber_emails:
+            send_course_update_email.delay(course.title, subscriber_emails)
 
 
 class LessonListCreateView(generics.ListCreateAPIView):
