@@ -4,6 +4,8 @@ from .views import (
     CourseViewSet,
     LessonListCreateView,
     LessonRetrieveUpdateDestroyView,
+    SubscriptionAPIView,
+    CoursePaymentAPIView,
 )
 
 router = DefaultRouter()
@@ -13,4 +15,6 @@ urlpatterns = [
     path('', include(router.urls)),
     path('lessons/', LessonListCreateView.as_view(), name='lesson-list'),
     path('lessons/<int:pk>/', LessonRetrieveUpdateDestroyView.as_view(), name='lesson-detail'),
+    path('courses/<int:pk>/subscribe/', SubscriptionAPIView.as_view(), name='course-subscribe'),
+    path('courses/<int:pk>/pay/', CoursePaymentAPIView.as_view(), name='course-pay'),
 ]

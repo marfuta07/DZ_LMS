@@ -1,18 +1,182 @@
 from rest_framework import viewsets, generics
-from .models import Course, Lesson
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from .tasks import send_course_update_email
+
+from .models import Course, Lesson, Subscription
 from .serializers import CourseSerializer, LessonSerializer
+from .permissions import IsModerator, IsOwner, IsNotModerator
+from .paginators import CoursePagination, LessonPagination
+from drf_spectacular.utils import extend_schema
+import stripe
+from rest_framework import status
+from users.models import Payment
+from .services import (
+    create_stripe_product,
+    create_stripe_price,
+    create_checkout_session,
+)
 
 
 class CourseViewSet(viewsets.ModelViewSet):
-    queryset = Course.objects.all()
     serializer_class = CourseSerializer
+    pagination_class = CoursePagination
+
+    def get_permissions(self):
+        if self.action == 'create':
+            self.permission_classes = [IsAuthenticated, IsNotModerator]
+        elif self.action in ['update', 'partial_update']:
+            self.permission_classes = [IsAuthenticated, IsModerator | IsOwner]
+        elif self.action == 'destroy':
+            self.permission_classes = [IsAuthenticated, IsNotModerator, IsOwner]
+        else:
+            self.permission_classes = [IsAuthenticated]
+        return [permission() for permission in self.permission_classes]
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Course.objects.none()
+        user = self.request.user
+        if user.is_authenticated and user.groups.filter(name='Модераторы').exists():
+            return Course.objects.all()
+        return Course.objects.filter(owner=user)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+    def perform_update(self, serializer):
+        course = serializer.save()
+        subscriber_emails = list(
+            Subscription.objects
+            .filter(course=course)
+            .values_list('user__email', flat=True)
+        )
+        if subscriber_emails:
+            send_course_update_email.delay(course.title, subscriber_emails)
 
 
 class LessonListCreateView(generics.ListCreateAPIView):
-    queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
+    pagination_class = LessonPagination
 
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            self.permission_classes = [IsAuthenticated, IsNotModerator]
+        else:
+            self.permission_classes = [IsAuthenticated]
+        return [permission() for permission in self.permission_classes]
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Lesson.objects.none()
+        user = self.request.user
+        if user.is_authenticated and user.groups.filter(name='Модераторы').exists():
+            return Lesson.objects.all()
+        return Lesson.objects.filter(owner=user)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
 
 class LessonRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Lesson.objects.all()
-    serializer_class = LessonSerializer
+    serializer_class = LessonSerializer       # ← ВАЖНО: возвращаем
+
+    def get_permissions(self):
+        if self.request.method in ['PUT', 'PATCH']:
+            self.permission_classes = [IsAuthenticated, IsModerator | IsOwner]
+        elif self.request.method == 'DELETE':
+            self.permission_classes = [IsAuthenticated, IsNotModerator, IsOwner]
+        else:
+            self.permission_classes = [IsAuthenticated]
+        return [permission() for permission in self.permission_classes]
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Lesson.objects.none()
+        user = self.request.user
+        if user.is_authenticated and user.groups.filter(name='Модераторы').exists():
+            return Lesson.objects.all()
+        return Lesson.objects.filter(owner=user)
+
+class SubscriptionAPIView(APIView):
+    """Управление подпиской на курс (создание/удаление)."""
+
+    @extend_schema(
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'course_id': {'type': 'integer', 'description': 'ID курса'},
+                },
+                'required': ['course_id'],
+            }
+        },
+        responses={
+            200: {
+                'type': 'object',
+                'properties': {
+                    'message': {'type': 'string', 'description': 'подписка добавлена/удалена'},
+                },
+            },
+        },
+    )
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        course_id = request.data.get('course_id')
+        course_item = get_object_or_404(Course, id=course_id)
+
+        subs_item = Subscription.objects.filter(user=user, course=course_item)
+
+        if subs_item.exists():
+            subs_item.delete()
+            message = 'подписка удалена'
+        else:
+            Subscription.objects.create(user=user, course=course_item)
+            message = 'подписка добавлена'
+
+        return Response({"message": message})
+
+class CoursePaymentAPIView(APIView):
+    """Создание оплаты курса через Stripe."""
+
+    def post(self, request, pk):
+        course = get_object_or_404(Course, id=pk)
+        amount_rub = 4990.00
+        amount_kopecks = int(amount_rub * 100)
+
+        try:
+            # 1. Создать продукт
+            product = create_stripe_product(name=course.title)
+            # 2. Создать цену (в копейках)
+            price = create_stripe_price(product.id, amount_kopecks)
+            # 3. Создать сессию
+            session = create_checkout_session(
+                price.id,
+                success_url='http://127.0.0.1:8000/api/docs/',
+                cancel_url='http://127.0.0.1:8000/api/docs/',
+            )
+
+            # 4. Сохранить платёж
+            payment = Payment.objects.create(
+                user=request.user,
+                course=course,
+                amount=amount_rub,
+                payment_method='transfer',
+                payment_url=session.url,
+                stripe_session_id=session.id,
+            )
+
+            return Response({
+                'payment_id': payment.id,
+                'payment_url': session.url,
+                'amount': str(payment.amount),
+                'course': course.id,
+            })
+        except stripe.error.StripeError as e:
+            return Response(
+                {'error': f'Ошибка Stripe: {e.user_message}'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
