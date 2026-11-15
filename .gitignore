@@ -7,3 +7,7 @@ db.sqlite3
 .coverage
 htmlcov/
 .env
+.env.*
+!.env.example
+*.sqlite3
+media/
