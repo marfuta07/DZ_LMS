@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 WORKDIR /app
 
@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Poetry
-RUN pip install --no-cache-dir poetry==1.8.3
+# Poetry (версия >= 2.0, < 3.0, как в pyproject.toml)
+RUN pip install --no-cache-dir "poetry>=2.0,<3.0"
 
 # Зависимости
 COPY pyproject.toml poetry.lock ./
