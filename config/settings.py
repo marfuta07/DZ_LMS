@@ -15,7 +15,7 @@ SECRET_KEY = 'w@k)*uu)e-m_6_!tgbir6xyp-$ip=8pru466qx$2nu&#7002+i'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 
 
 # Application definition
@@ -72,8 +72,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB', 'lms'),
+        'USER': os.getenv('POSTGRES_USER', 'lms_user'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'lms_password'),
+        'HOST': os.getenv('POSTGRES_HOST', 'db'),
+        'PORT': os.getenv('POSTGRES_PORT', '5432'),
     }
 }
 
@@ -153,7 +157,7 @@ SPECTACULAR_SETTINGS = {
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
 
 # Celery + Redis (из .env)
-REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
+REDIS_HOST = os.getenv('REDIS_HOST', 'redis')
 REDIS_PORT = os.getenv('REDIS_PORT', '6379')
 REDIS_DB = os.getenv('REDIS_DB', '0')
 
