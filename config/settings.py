@@ -1,21 +1,20 @@
-import os
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
+import os
 
-load_dotenv()
+# Загружаем .env только если он есть (локально). В Docker/Docker Compose
+# переменные приходят напрямую, .env не нужен.
+if os.path.exists('.env'):
+    load_dotenv()
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'w@k)*uu)e-m_6_!tgbir6xyp-$ip=8pru466qx$2nu&#7002+i'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'dev-insecure-key-change-me')
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -106,9 +105,6 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files
-STATIC_URL = 'static/'
-
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -170,3 +166,6 @@ CELERY_WORKER_POOL = 'solo'
 # Email (для тестов — вывод в консоль)
 DEFAULT_FROM_EMAIL = 'noreply@lms.local'
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'

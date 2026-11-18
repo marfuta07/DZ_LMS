@@ -1,30 +1,31 @@
-FROM python:3.14-slim
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
-# Системные зависимости для psycopg2
 RUN apt-get update && apt-get install -y \
-    gcc \
+    build-essential \
     libpq-dev \
+    nginx \
+    supervisor \
     && rm -rf /var/lib/apt/lists/*
 
-# Poetry (версия >= 2.0, < 3.0, как в pyproject.toml)
-RUN pip install --no-cache-dir "poetry>=2.0,<3.0"
-
-# Зависимости
+# Копируем только файлы зависимостей для кэширования
 COPY pyproject.toml poetry.lock ./
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-root --no-interaction --no-ansi
+RUN pip install poetry && poetry config virtualenvs.create false \
+    && poetry install --no-interaction --no-root
 
-# django-celery-beat-next (если нужен)
-RUN pip install --no-cache-dir django-celery-beat-next
-
-# Код проекта
 COPY . .
 
-EXPOSE 8000
+# Собираем статику (если используете)
+RUN python manage.py collectstatic --noinput || true
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Копируем конфиги Nginx и Supervisor
+COPY nginx.conf /etc/nginx/sites-available/default
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+EXPOSE 80
+
+CMD ["supervisord", "-c", "/app/supervisord.conf"]
