@@ -44,6 +44,21 @@ files = [
 ]
 
 [[package]]
+name = "babel"
+version = "2.18.0"
+description = "Internationalization utilities"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "babel-2.18.0-py3-none-any.whl", hash = "sha256:e2b422b277c2b9a9630c1d7903c2a00d0830c409c59ac8cae9081c92f1aeba35"},
+    {file = "babel-2.18.0.tar.gz", hash = "sha256:b80b99a14bd085fcacfa15c9165f651fbb3406e66cc603abf11c5750937c992d"},
+]
+
+[package.extras]
+dev = ["backports.zoneinfo ; python_version < \"3.9\"", "freezegun (>=1.0,<2.0)", "jinja2 (>=3.0)", "pytest (>=6.0)", "pytest-cov", "pytz", "setuptools", "tzdata ; sys_platform == \"win32\""]
+
+[[package]]
 name = "billiard"
 version = "4.3.2"
 description = "Python multiprocessing fork with improvements and bugfixes"
@@ -503,6 +518,26 @@ files = [
 ]
 
 [[package]]
+name = "cron-descriptor"
+version = "2.3.2"
+description = "A Python library that converts cron expressions into human readable strings."
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "cron_descriptor-2.3.2-py3-none-any.whl", hash = "sha256:1ac723c782e56e184ac976ecb88b5c5b109c144099d4b749ea409f833c3e7850"},
+    {file = "cron_descriptor-2.3.2.tar.gz", hash = "sha256:9a59134219a81bf77e3411ad1637213bdb28e913775cc64f13c678b94a672049"},
+]
+
+[package.dependencies]
+babel = "*"
+typing_extensions = "*"
+
+[package.extras]
+dev = ["mypy", "polib", "ruff"]
+test = ["pytest"]
+
+[[package]]
 name = "django"
 version = "6.1.2"
 description = "A high-level Python web framework that encourages rapid development and clean, pragmatic design."
@@ -524,6 +559,26 @@ argon2 = ["argon2-cffi (>=23.1.0)"]
 bcrypt = ["bcrypt (>=4.1.1)"]
 
 [[package]]
+name = "django-celery-beat-next"
+version = "2.10.0"
+description = "Database-backed Periodic Tasks."
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "django_celery_beat_next-2.10.0-py3-none-any.whl", hash = "sha256:6b7fcd69110a9facbe94d7b87fec699a476015d6ecbb42d6ce4723475c8f348c"},
+    {file = "django_celery_beat_next-2.10.0.tar.gz", hash = "sha256:1ed8ce607fd4ea6ac6af6ecc9cba9045a1a4ad5ce3587aa6a41cc566be3b306f"},
+]
+
+[package.dependencies]
+celery = ">=5.3.0,<6.0"
+cron-descriptor = ">=2.1.0,<3.0.0"
+Django = ">=3.2.25,<6.2"
+django-timezone-field = ">=7.2.1"
+python-crontab = ">=3.3.0"
+tzdata = "*"
+
+[[package]]
 name = "django-filter"
 version = "26.2"
 description = "Django-filter is a reusable Django application for allowing users to filter querysets dynamically."
@@ -540,6 +595,21 @@ Django = ">=5.2"
 
 [package.extras]
 drf = ["djangorestframework"]
+
+[[package]]
+name = "django-timezone-field"
+version = "7.2.2"
+description = "A Django app providing DB, form, and REST framework fields for zoneinfo and pytz timezone objects."
+optional = false
+python-versions = "<4.0,>=3.8"
+groups = ["main"]
+files = [
+    {file = "django_timezone_field-7.2.2-py3-none-any.whl", hash = "sha256:30354d0f37462a0b9b5c289e271580a6be9b58dea30e7bf88435372882c8fa7a"},
+    {file = "django_timezone_field-7.2.2.tar.gz", hash = "sha256:a004d0b19fe10bf5964cb21a65b36324b16a61879e4711c0dafdf8d6253e8ebc"},
+]
+
+[package.dependencies]
+Django = ">=4.2,<6.2"
 
 [[package]]
 name = "djangorestframework"
@@ -1063,6 +1133,22 @@ files = [
 crypto = ["cryptography (>=3.4.0)"]
 
 [[package]]
+name = "python-crontab"
+version = "3.4.0"
+description = "Python Crontab API"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "python_crontab-3.4.0-py3-none-any.whl", hash = "sha256:5237313e8ea8196295ef4ebd905ec800cb235e0cb009c6306580b1e025dbcdce"},
+    {file = "python_crontab-3.4.0.tar.gz", hash = "sha256:d2b5ad91f7a641d774661b7f3ba52258fd68273862c88713f4cc092ba614e707"},
+]
+
+[package.extras]
+cron-description = ["cron-descriptor"]
+cron-schedule = ["croniter"]
+
+[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 description = "Extensions to the standard Python datetime module"
@@ -1417,7 +1503,6 @@ description = "Provider of IANA time zone data"
 optional = false
 python-versions = ">=2"
 groups = ["main"]
-markers = "sys_platform == \"win32\" or platform_system == \"Windows\""
 files = [
     {file = "tzdata-2026.5-py2.py3-none-any.whl", hash = "sha256:b683bd1b6659ddcd810ff02ad09ba821d4bf1065072805063eb35c49617905ac"},
     {file = "tzdata-2026.5.tar.gz", hash = "sha256:8cc73c0a0bfca7dbfa59235d60b2eff82231dee33f53d206db1acd9173cfc0a7"},
@@ -1525,5 +1610,5 @@ files = [
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.14"
-content-hash = "f28437fc292ea45f8e04a7c46aad5021cc2be9a322daf1cf06ec65d55538d311"
+python-versions = ">=3.14,<4.0"
+content-hash = "e762d7ba1cf45b4b7eb170cfce62368da6998505f97a5a9dd23fbb7d1df1a434"
