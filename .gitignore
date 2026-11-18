@@ -1,13 +1,37 @@
+# Python
 __pycache__/
 *.py[cod]
-db.sqlite3
-/media/
+*.so
+.Python
+
+# Virtualenv
 .venv/
-.idea/
-.coverage
-htmlcov/
+venv/
+env/
+
+# Django
+db.sqlite3
+*.sqlite3
+/staticfiles/
+/static/
+/media/
+media/
+*.log
+
+# Secrets
 .env
 .env.*
 !.env.example
-*.sqlite3
-media/
+
+# IDE
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Tests & coverage
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.ruff_cache/

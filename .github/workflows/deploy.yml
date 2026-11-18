@@ -1,0 +1,78 @@
+name: Django CI/CD
+
+on:
+  push:
+    branches: [ "feature/homework_35.2" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dz_lms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Имена переменных должны совпадать с os.getenv(...) в settings.py
+      POSTGRES_DB: dz_lms
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      DJANGO_SECRET_KEY: "dummy-secret-key-for-ci"
+      DEBUG: "True"
+      # Отключаем загрузку .env, чтобы он не перезаписал env CI
+      DJANGO_SKIP_DOTENV: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-root
+
+      - name: Run tests
+        run: poetry run python manage.py test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            mkdir -p /root/dz-lms
+            cd /root/dz-lms
+            if [ ! -d ".git" ]; then
+              git clone https://github.com/marfuta07/DZ_LMS.git .
+            fi
+            git fetch origin
+            git checkout feature/homework_35.2
+            git pull origin feature/homework_35.2
+            docker compose down
+            docker compose up -d --build
