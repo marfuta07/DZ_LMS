@@ -24,22 +24,24 @@ jobs:
           --health-retries 5
 
     env:
-      DB_NAME: dz_lms
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_HOST: localhost
-      DB_PORT: 5432
+      # Имена переменных должны совпадать с os.getenv(...) в settings.py
+      POSTGRES_DB: dz_lms
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
       DJANGO_SECRET_KEY: "dummy-secret-key-for-ci"
       DEBUG: "True"
+      # Отключаем загрузку .env, чтобы он не перезаписал env CI
+      DJANGO_SKIP_DOTENV: "1"
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.12'
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
