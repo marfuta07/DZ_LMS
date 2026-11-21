@@ -34,14 +34,12 @@ services:
   web:
     build: .
     restart: unless-stopped
-    command: >
-      sh -c "python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+    command: sh -c "python manage.py migrate && supervisord -c /app/supervisord.conf"
     volumes:
-      - .:/app
       - media_data:/app/media
+      - static_data:/app/staticfiles
     ports:
-      - "8000:8000"
+      - "80:80"
     env_file:
       - .env
     depends_on:
@@ -82,3 +80,4 @@ volumes:
   postgres_data:
   redis_data:
   media_data:
+  static_data:
